@@ -52,19 +52,33 @@ local function CreateCheckbox(parent, name, text, xOffset, yPos, checked, onClic
 end
 
 local function CreateSlider(parent, name, label, min, max, step, defaultVal, xOffset, yPos, width, callback)
-    local slider = CreateFrame("Slider", name, parent, "OptionsSliderTemplate")
-    slider:SetPoint("TOPLEFT", xOffset, yPos)
+    local container = CreateFrame("Frame", nil, parent)
+    container:SetSize(width or 400, 50)
+    container:SetPoint("TOPLEFT", xOffset, yPos)
+
+    local labelText = container:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    labelText:SetPoint("TOPLEFT", 0, 0)
+    labelText:SetText(label .. ": " .. defaultVal)
+
+    local slider = CreateFrame("Slider", name, container, "OptionsSliderTemplate")
+    slider:SetPoint("TOPLEFT", 0, -20)
     slider:SetWidth(width or 400)
     slider:SetHeight(16)
     slider:SetMinMaxValues(min, max)
     slider:SetValueStep(step)
     slider:SetValue(defaultVal)
 
-    -- Set up slider labels
+    -- Hide default slider text
     local sliderName = slider:GetName()
-    _G[sliderName.."Low"]:SetText(min)
-    _G[sliderName.."High"]:SetText(max)
-    _G[sliderName.."Text"]:SetText(label .. ": " .. defaultVal)
+    if sliderName then
+        local lowText = _G[sliderName .. "Low"]
+        local highText = _G[sliderName .. "High"]
+        local valueText = _G[sliderName .. "Text"]
+
+        if lowText then lowText:SetText("") end
+        if highText then highText:SetText("") end
+        if valueText then valueText:SetText("") end
+    end
 
     -- Set the change handler
     slider:SetScript("OnValueChanged", function(self, value)
@@ -75,7 +89,7 @@ local function CreateSlider(parent, name, label, min, max, step, defaultVal, xOf
             roundedValue = math.floor(value + 0.5)
         end
 
-        _G[sliderName.."Text"]:SetText(label .. ": " .. roundedValue)
+        labelText:SetText(label .. ": " .. roundedValue)
 
         if callback then
             callback(roundedValue)
@@ -84,7 +98,6 @@ local function CreateSlider(parent, name, label, min, max, step, defaultVal, xOf
 
     return slider, yPos - 50
 end
-
 
 function ConfigUI:InitializeOptions()
 	local panel = CreateFrame("Frame")
@@ -155,13 +168,10 @@ function ConfigUI:InitializeOptions()
     yPos = newY - 5
 
     -- TTL slider
-    local label, newY = CreateLabel(panel, "Days to Remember Players:", 30, yPos)
-    yPos = newY - 5
-
     local _, newY = CreateSlider(
         panel,
         "PRYTTLSlider",
-        "Days to Remember",
+        "Days to Remember Players",
         1, 365, 1,
         PeaversRemembersYouDB.settings.ttl,
         30, yPos, 400,
@@ -172,13 +182,10 @@ function ConfigUI:InitializeOptions()
     yPos = newY
 
     -- Chat frame slider
-    local label, newY = CreateLabel(panel, "Notification Chat Frame:", 30, yPos)
-    yPos = newY - 5
-
     local _, newY = CreateSlider(
         panel,
         "PRYChatFrameSlider",
-        "Chat Frame",
+        "Notification Chat Frame",
         1, 10, 1,
         PeaversRemembersYouDB.settings.chatFrame,
         30, yPos, 400,
@@ -189,13 +196,10 @@ function ConfigUI:InitializeOptions()
     yPos = newY
 
     -- Notification threshold slider - Updated to allow 0 (always notify)
-    local label, newY = CreateLabel(panel, "Notification Threshold (minutes - 0 for always):", 30, yPos)
-    yPos = newY - 5
-
     local _, newY = CreateSlider(
         panel,
         "PRYThresholdSlider",
-        "Notification Threshold",
+        "Notification Threshold (minutes - 0 for always)",
         0, 60, 1,
         PeaversRemembersYouDB.settings.notificationThreshold / 60,
         30, yPos, 400,
