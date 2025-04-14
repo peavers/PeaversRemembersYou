@@ -1,0 +1,21 @@
+## Interface: 110105
+
+## Title: |cff3abdf7Peavers|rRemembersYou
+## IconTexture: Interface\AddOns\PeaversRemembersYou\src\Media\Icon.tga
+
+## Notes: Records players you group with and notifies you when you meet them again
+
+## Author: Peavers
+## Version: 1.0.0
+## X-Curse-Project-ID:
+
+## SavedVariables: PeaversRemembersYouDB
+
+## Category-enUS: Peavers
+
+src\Main.lua
+src\Utils\ConfigUI.lua
+src\Utils\SupportUI.lua
+
+src\PeaversRemembersYou.lua
+

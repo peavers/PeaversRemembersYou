@@ -1,0 +1,11 @@
+package-as: PeaversRemembersYou
+
+ignore:
+  - .git
+  - .github
+  - .gitignore
+  - .editorconfig
+  - .pkgmeta
+  - README.md
+  - CHANGELOG.md
+  - LICENSE
