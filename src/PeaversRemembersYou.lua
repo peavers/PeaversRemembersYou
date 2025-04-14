@@ -41,10 +41,14 @@ function PRY:Initialize()
 	-- Register events
 	self:RegisterEvents()
 
-	-- Initialize UI components AFTER core is ready
-	if PRY.Utils.ConfigUI then
-		PRY.Utils.ConfigUI:Initialize()
-	end
+	-- We need to delay UI initialization until the Settings API is fully loaded
+	-- This is crucial for proper Settings integration
+	C_Timer.After(1, function()
+		-- Initialize UI components AFTER core is ready
+		if PRY.Utils.ConfigUI then
+			PRY.Utils.ConfigUI:Initialize()
+		end
+	end)
 
 	isInitialized = true
 end
@@ -201,7 +205,7 @@ function PRY:HandleSlashCommand(msg)
 		PeaversRemembersYouDB.settings.enabled = not PeaversRemembersYouDB.settings.enabled
 		print("|cff33ff99PeaversRemembersYou|r: " .. (PeaversRemembersYouDB.settings.enabled and "Enabled" or "Disabled"))
 	else
-		-- Open the settings panel directly using the correct API pattern
+		-- Make sure we use the correct Settings API call
 		Settings.OpenToCategory("PeaversRemembersYou")
 	end
 end

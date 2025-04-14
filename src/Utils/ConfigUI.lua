@@ -93,9 +93,14 @@ end
 function ConfigUI:InitializeOptions()
 	local panel = CreateFrame("Frame")
 	panel.name = "PeaversRemembersYou"
-	panel:SetSize(600, 500) -- Explicit size can help
 
-	-- Create a proper scroll frame with the new API pattern
+	-- These are important for Settings integration
+	panel.layoutIndex = 1
+	panel.OnShow = function(self)
+		return true
+	end
+
+	-- Create a proper scroll frame
 	local scrollFrame = CreateFrame("ScrollFrame", nil, panel, "UIPanelScrollFrameTemplate")
 	scrollFrame:SetPoint("TOPLEFT", 10, -10)
 	scrollFrame:SetPoint("BOTTOMRIGHT", -30, 10)
@@ -276,11 +281,13 @@ function ConfigUI:InitializeOptions()
 		yPos = yPos - 18
 	end
 
-	-- Update content height based on the last element position - VERY IMPORTANT
+	-- Update content height based on the last element position
 	content:SetHeight(math.abs(yPos) + 50)
 
 	-- Required callbacks
-	panel.refresh = function() end  -- Changed from OnRefresh to refresh
+	panel.OnRefresh = function() end
+	panel.OnCommit = function() end
+	panel.OnDefault = function() end
 
 	return panel
 end
@@ -295,14 +302,14 @@ function ConfigUI:Initialize()
 
 	local panel = self:InitializeOptions()
 
-	-- IMPORTANT: Only register ONCE with the correct API
+	-- Register with the Settings API using the pattern that works in your other addons
 	PRY.mainCategory = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
 	PRY.mainCategory.ID = panel.name
 	Settings.RegisterAddOnCategory(PRY.mainCategory)
 
-	-- Initialize Support UI only after main category is created and properly registered
+	-- Initialize Support UI after a delay to ensure the main category is registered
 	if PRY.Utils.SupportUI then
-		C_Timer.After(0.1, function()
+		C_Timer.After(0.5, function()
 			PRY.Utils.SupportUI:Initialize()
 		end)
 	end
@@ -310,5 +317,5 @@ end
 
 -- Opens the configuration panel
 function ConfigUI:Open()
-	Settings.OpenToCategory(PRY.mainCategory.ID)  -- Use the ID directly
+	Settings.OpenToCategory(PRY.mainCategory.ID)
 end

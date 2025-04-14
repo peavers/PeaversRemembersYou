@@ -58,10 +58,10 @@ function SupportUI:InitializeOptions()
 	additionalInfo:SetJustifyH("RIGHT")
 	additionalInfo:SetText("Thank you for using Peavers Addons!")
 
-	-- Required callbacks
-	panel.OnRefresh = function() end
+	-- Required callbacks for Settings API
 	panel.OnCommit = function() end
 	panel.OnDefault = function() end
+	panel.OnRefresh = function() end
 
 	return panel
 end
@@ -77,6 +77,9 @@ function SupportUI:Initialize()
 	local panel = self:InitializeOptions()
 
 	-- Register as subcategory of the main category
+	-- Use the correct API for subcategory registration
 	PRY.supportCategory = Settings.RegisterCanvasLayoutSubcategory(PRY.mainCategory, panel, panel.name)
-	PRY.supportCategory.ID = panel.name
+
+	-- Set a proper ID for the subcategory
+	PRY.supportCategory.ID = "PeaversRemembersYou_Support"
 end
