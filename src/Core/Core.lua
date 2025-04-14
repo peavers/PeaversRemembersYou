@@ -31,24 +31,35 @@ function PRY:Initialize()
 		end
 	end
 
-	-- Set up slash commands
-	SLASH_PEAVERSREMEMBERSYOU1 = "/pry"
-	SLASH_PEAVERSREMEMBERSYOU2 = "/peaversremembersyou"
-	SlashCmdList["PEAVERSREMEMBERSYOU"] = function(msg)
-		PRY:HandleSlashCommand(msg)
+	-- Create the static popups
+	if not StaticPopupDialogs["PRY_CONFIRM_RESET"] then
+		StaticPopupDialogs["PRY_CONFIRM_RESET"] = {
+			text = "Are you sure you want to reset your PeaversRemembersYou database?",
+			button1 = "Yes",
+			button2 = "No",
+			OnAccept = function() PRY:ResetDatabase() end,
+			timeout = 0,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3,
+		}
+	end
+
+	if not StaticPopupDialogs["PRY_CONFIRM_RELOAD"] then
+		StaticPopupDialogs["PRY_CONFIRM_RELOAD"] = {
+			text = "Database has been cleared. It's recommended to reload your UI to ensure all settings are properly updated. Reload now?",
+			button1 = "Yes",
+			button2 = "No",
+			OnAccept = function() ReloadUI() end,
+			timeout = 0,
+			whileDead = true,
+			hideOnEscape = true,
+			preferredIndex = 3,
+		}
 	end
 
 	-- Register events
 	self:RegisterEvents()
-
-	-- We need to delay UI initialization until the Settings API is fully loaded
-	-- This is crucial for proper Settings integration
-	C_Timer.After(1, function()
-		-- Initialize UI components AFTER core is ready
-		if PRY.Utils.ConfigUI then
-			PRY.Utils.ConfigUI:Initialize()
-		end
-	end)
 
 	isInitialized = true
 end
@@ -131,8 +142,9 @@ function PRY:ProcessPlayer(name, groupType)
 		-- Player exists in database
 		local timeSinceLastMet = currentTime - PeaversRemembersYouDB.players[name].lastSeen
 
-		-- Only announce if it's been at least the configured threshold time since we last saw them
-		if timeSinceLastMet >= PeaversRemembersYouDB.settings.notificationThreshold then
+		-- Fix: Always send notification if threshold is 0, otherwise use threshold
+		if PeaversRemembersYouDB.settings.notificationThreshold == 0 or
+		   timeSinceLastMet >= PeaversRemembersYouDB.settings.notificationThreshold then
 			local oldGroupType = PeaversRemembersYouDB.players[name].groupType
 
 			-- Use the fancy formatted message
@@ -193,19 +205,13 @@ end
 function PRY:ResetDatabase()
 	wipe(PeaversRemembersYouDB.players)
 	print("|cff33ff99PeaversRemembersYou|r: Player database has been cleared.")
+
+	-- Show reload UI confirmation
+	StaticPopup_Show("PRY_CONFIRM_RELOAD")
 end
 
--- Handle slash commands
+-- Handle slash commands - Kept minimal
 function PRY:HandleSlashCommand(msg)
-	msg = msg:lower():trim()
-
-	if msg == "reset" then
-		self:ResetDatabase()
-	elseif msg == "toggle" then
-		PeaversRemembersYouDB.settings.enabled = not PeaversRemembersYouDB.settings.enabled
-		print("|cff33ff99PeaversRemembersYou|r: " .. (PeaversRemembersYouDB.settings.enabled and "Enabled" or "Disabled"))
-	else
-		-- Make sure we use the correct Settings API call
-		Settings.OpenToCategory("PeaversRemembersYou")
-	end
+	-- Just open the settings panel directly
+	Settings.OpenToCategory("PeaversRemembersYou")
 end

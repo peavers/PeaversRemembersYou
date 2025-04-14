@@ -17,5 +17,5 @@ src\Main.lua
 src\Utils\ConfigUI.lua
 src\Utils\SupportUI.lua
 
-src\PeaversRemembersYou.lua
+src\Core\Core.lua
 
