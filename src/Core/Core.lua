@@ -13,6 +13,7 @@ local defaults = {
 local icon = "|TInterface\\Icons\\INV_Misc_Note_01:16:16:0:0|t"
 local eventHandlers = {}
 local isInitialized = false
+local currentGroupMembers = {} -- Track current group members
 
 -- Initialize the addon
 function PRY:Initialize()
@@ -71,6 +72,7 @@ function PRY:RegisterEvents()
 
 	eventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 	eventFrame:RegisterEvent("RAID_ROSTER_UPDATE")
+	eventFrame:RegisterEvent("PLAYER_ENTERING_WORLD") -- Added to initialize group state
 
 	eventFrame:SetScript("OnEvent", function(self, event, ...)
 		if isInitialized and eventHandlers[event] then
@@ -80,14 +82,50 @@ function PRY:RegisterEvents()
 end
 
 -- Event Handlers
+eventHandlers.PLAYER_ENTERING_WORLD = function()
+	if not PeaversRemembersYouDB.settings.enabled then return end
+	wipe(currentGroupMembers) -- Clear current group members on login/reload
+
+	if IsInGroup() or IsInRaid() then
+		PRY:UpdateCurrentGroupMembers()
+	end
+end
+
 eventHandlers.GROUP_ROSTER_UPDATE = function()
 	if not PeaversRemembersYouDB.settings.enabled then return end
-	if not IsInGroup() and not IsInRaid() then return end
+	if not IsInGroup() and not IsInRaid() then
+		wipe(currentGroupMembers) -- Clear current group members when leaving group
+		return
+	end
 
 	PRY:ProcessGroupMembers()
 end
 
 eventHandlers.RAID_ROSTER_UPDATE = eventHandlers.GROUP_ROSTER_UPDATE
+
+-- Update current group members
+function PRY:UpdateCurrentGroupMembers()
+	wipe(currentGroupMembers)
+
+	-- Get current group members
+	local numGroupMembers = IsInRaid() and GetNumGroupMembers() or GetNumSubgroupMembers()
+
+	if numGroupMembers > 0 then
+		local prefix = IsInRaid() and "raid" or "party"
+
+		for i = 1, numGroupMembers do
+			local unit = prefix..i
+
+			if UnitExists(unit) then
+				local name = GetUnitName(unit, true)
+
+				if name and name ~= UnitName("player") then
+					currentGroupMembers[name] = true
+				end
+			end
+		end
+	end
+end
 
 -- Process group members
 function PRY:ProcessGroupMembers()
@@ -105,6 +143,7 @@ function PRY:ProcessGroupMembers()
 
 	-- Get current group members
 	local numGroupMembers = IsInRaid() and GetNumGroupMembers() or GetNumSubgroupMembers()
+	local newGroupMembers = {}
 
 	-- Check if we're in a group
 	if numGroupMembers > 0 then
@@ -120,15 +159,22 @@ function PRY:ProcessGroupMembers()
 
 				if name and name ~= UnitName("player") then
 					local isGuildMember = UnitIsInMyGuild(unit)
+					newGroupMembers[name] = true
 
 					-- Skip guild members if option is enabled
 					if not (PeaversRemembersYouDB.settings.excludeGuild and isGuildMember) then
-						self:ProcessPlayer(name, groupType)
+						-- Only process if they're not already in the current group
+						if not currentGroupMembers[name] then
+							self:ProcessPlayer(name, groupType)
+						end
 					end
 				end
 			end
 		end
 	end
+
+	-- Update current group members
+	currentGroupMembers = newGroupMembers
 
 	-- Clean up old entries
 	self:CleanupDatabase()
