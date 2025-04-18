@@ -6,6 +6,7 @@ PRY = PRY or {}
 -- Module namespaces
 PRY.Utils = {}
 PRY.Config = {}
+PRY.PlayerListUI = {} -- Add the new UI module namespace
 
 -- Version information
 PRY.version = "1.0.0"
@@ -31,6 +32,13 @@ initFrame:SetScript("OnEvent", function(self, event, arg1)
                 if PRY.SupportUI and PRY.SupportUI.Initialize then
                     PRY.SupportUI:Initialize()
                 end
+
+                -- Initialize player list UI with a small delay
+                C_Timer.After(0.1, function()
+                    if PRY.PlayerListUI and PRY.PlayerListUI.Initialize then
+                        PRY.PlayerListUI:Initialize()
+                    end
+                end)
             end)
         end)
 
@@ -45,6 +53,7 @@ loadingFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 loadingFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_ENTERING_WORLD" then
         print("|cff33ff99PeaversRemembersYou|r: Addon loaded - remembering your party members")
+        print("|cff33ff99PeaversRemembersYou|r: Type /prylist to view all remembered players")
         self:UnregisterEvent("PLAYER_ENTERING_WORLD")
     end
 end)

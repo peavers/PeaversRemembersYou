@@ -6,14 +6,19 @@ local defaults = {
 	ttl = 30, -- Time to live in days
 	excludeGuild = true,
 	chatFrame = 1,
-	notificationThreshold = 300 -- Minimum time in seconds
+	notificationThreshold = 300, -- Minimum time in seconds
+	debug = false -- Added debug option
 }
 
 -- Local variables
 local icon = "|TInterface\\Icons\\INV_Misc_Note_01:16:16:0:0|t"
 local eventHandlers = {}
 local isInitialized = false
-local currentGroupMembers = {} -- Track current group members
+local pendingPlayers = {} -- Table for tracking players with "Unknown" names
+
+-- Expose currentGroupMembers to other modules by putting it in the addon namespace
+-- instead of keeping it as a local variable
+PRY.currentGroupMembers = {}
 
 -- Initialize the addon
 function PRY:Initialize()
@@ -81,10 +86,17 @@ function PRY:RegisterEvents()
 	end)
 end
 
+-- Debug function
+function PRY:Debug(message)
+	if PeaversRemembersYouDB.settings.debug then
+		print("|cff33ff99PeaversRemembersYou Debug:|r " .. message)
+	end
+end
+
 -- Event Handlers
 eventHandlers.PLAYER_ENTERING_WORLD = function()
 	if not PeaversRemembersYouDB.settings.enabled then return end
-	wipe(currentGroupMembers) -- Clear current group members on login/reload
+	wipe(PRY.currentGroupMembers) -- Clear current group members on login/reload
 
 	if IsInGroup() or IsInRaid() then
 		PRY:UpdateCurrentGroupMembers()
@@ -94,7 +106,7 @@ end
 eventHandlers.GROUP_ROSTER_UPDATE = function()
 	if not PeaversRemembersYouDB.settings.enabled then return end
 	if not IsInGroup() and not IsInRaid() then
-		wipe(currentGroupMembers) -- Clear current group members when leaving group
+		wipe(PRY.currentGroupMembers) -- Clear current group members when leaving group
 		return
 	end
 
@@ -105,7 +117,7 @@ eventHandlers.RAID_ROSTER_UPDATE = eventHandlers.GROUP_ROSTER_UPDATE
 
 -- Update current group members
 function PRY:UpdateCurrentGroupMembers()
-	wipe(currentGroupMembers)
+	wipe(PRY.currentGroupMembers)
 
 	-- Get current group members
 	local numGroupMembers = IsInRaid() and GetNumGroupMembers() or GetNumSubgroupMembers()
@@ -119,17 +131,100 @@ function PRY:UpdateCurrentGroupMembers()
 			if UnitExists(unit) then
 				local name = GetUnitName(unit, true)
 
-				if name and name ~= UnitName("player") then
-					currentGroupMembers[name] = true
+				if name and name ~= "Unknown" and name ~= UnitName("player") then
+					PRY.currentGroupMembers[name] = true
 				end
 			end
 		end
 	end
 end
 
--- Process group members
-function PRY:ProcessGroupMembers()
-	-- Get current group type
+-- Queue an unknown player for retry
+function PRY:QueueUnknownPlayer(unit, context)
+	-- First, check if this unit is already in the queue
+	for i, pendingPlayer in ipairs(pendingPlayers) do
+		if pendingPlayer.unit == unit then
+			self:Debug("Unit " .. unit .. " already in retry queue")
+			return
+		end
+	end
+
+	-- Add to pending players
+	table.insert(pendingPlayers, {
+		unit = unit,
+		attempts = 0,
+		context = context
+	})
+
+	self:Debug("Added unknown player " .. unit .. " to retry queue from " .. context)
+
+	-- Start retry timers if this is the first pending player
+	if #pendingPlayers == 1 then
+		self:ProcessPendingPlayers()
+	end
+end
+
+-- Process pending players with retries
+function PRY:ProcessPendingPlayers()
+	if #pendingPlayers == 0 then return end
+
+	C_Timer.After(0.5, function()
+		local i = 1
+		while i <= #pendingPlayers do
+			local pendingPlayer = pendingPlayers[i]
+			pendingPlayer.attempts = pendingPlayer.attempts + 1
+
+			local unit = pendingPlayer.unit
+			local name = GetUnitName(unit, true)
+
+			if not UnitExists(unit) then
+				-- Unit no longer exists, remove from queue
+				self:Debug("Unit " .. unit .. " no longer exists, removing from queue")
+				table.remove(pendingPlayers, i)
+			elseif name and name ~= "Unknown" and name ~= UnitName("player") then
+				-- Successfully got name
+				self:Debug("Successfully resolved name for " .. unit .. ": " .. name)
+
+				if pendingPlayer.context == "UpdateCurrentGroupMembers" then
+					PRY.currentGroupMembers[name] = true
+				elseif pendingPlayer.context == "ProcessGroupMembers" then
+					-- Process as if we just found this player
+					local groupType = self:GetCurrentGroupType()
+					local isGuildMember = UnitIsInMyGuild(unit)
+
+					-- Need to add to both newGroupMembers in the original function and currentGroupMembers
+					pendingPlayer.newGroupMembers[name] = true
+
+					-- Skip guild members if option is enabled
+					if not (PeaversRemembersYouDB.settings.excludeGuild and isGuildMember) then
+						-- Only process if they're not already in the current group
+						if not PRY.currentGroupMembers[name] then
+							self:ProcessPlayer(name, groupType)
+						end
+					end
+				end
+
+				table.remove(pendingPlayers, i)
+			elseif pendingPlayer.attempts >= 3 then
+				-- Max retries reached
+				self:Debug("Max retries reached for " .. unit .. ", giving up")
+				table.remove(pendingPlayers, i)
+			else
+				-- Still unknown, continue to next
+				self:Debug("Still unknown after attempt " .. pendingPlayer.attempts .. " for " .. unit)
+				i = i + 1
+			end
+		end
+
+		-- If we still have pending players, schedule another check
+		if #pendingPlayers > 0 then
+			self:ProcessPendingPlayers()
+		end
+	end)
+end
+
+-- Helper function to get current group type
+function PRY:GetCurrentGroupType()
 	local groupType = "group"
 	if IsInRaid() then
 		groupType = "raid"
@@ -140,6 +235,14 @@ function PRY:ProcessGroupMembers()
 	if inInstance and instanceType == "party" then
 		groupType = "dungeon"
 	end
+
+	return groupType
+end
+
+-- Process group members
+function PRY:ProcessGroupMembers()
+	-- Get current group type
+	local groupType = self:GetCurrentGroupType()
 
 	-- Get current group members
 	local numGroupMembers = IsInRaid() and GetNumGroupMembers() or GetNumSubgroupMembers()
@@ -158,14 +261,31 @@ function PRY:ProcessGroupMembers()
 				local name = GetUnitName(unit, true)
 
 				if name and name ~= UnitName("player") then
-					local isGuildMember = UnitIsInMyGuild(unit)
-					newGroupMembers[name] = true
+					if name == "Unknown" then
+						-- Queue for retry, but pass newGroupMembers so we can update it later
+						local pendingPlayer = {
+							unit = unit,
+							attempts = 0,
+							context = "ProcessGroupMembers",
+							newGroupMembers = newGroupMembers
+						}
+						table.insert(pendingPlayers, pendingPlayer)
+						self:Debug("Added unknown player " .. unit .. " to retry queue from ProcessGroupMembers")
 
-					-- Skip guild members if option is enabled
-					if not (PeaversRemembersYouDB.settings.excludeGuild and isGuildMember) then
-						-- Only process if they're not already in the current group
-						if not currentGroupMembers[name] then
-							self:ProcessPlayer(name, groupType)
+						-- Start retry timers if this is the first pending player
+						if #pendingPlayers == 1 then
+							self:ProcessPendingPlayers()
+						end
+					else
+						local isGuildMember = UnitIsInMyGuild(unit)
+						newGroupMembers[name] = true
+
+						-- Skip guild members if option is enabled
+						if not (PeaversRemembersYouDB.settings.excludeGuild and isGuildMember) then
+							-- Only process if they're not already in the current group
+							if not PRY.currentGroupMembers[name] then
+								self:ProcessPlayer(name, groupType)
+							end
 						end
 					end
 				end
@@ -174,7 +294,7 @@ function PRY:ProcessGroupMembers()
 	end
 
 	-- Update current group members
-	currentGroupMembers = newGroupMembers
+	PRY.currentGroupMembers = newGroupMembers
 
 	-- Clean up old entries
 	self:CleanupDatabase()

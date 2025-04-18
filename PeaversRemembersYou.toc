@@ -17,5 +17,6 @@ src\Main.lua
 src\Utils\ConfigUI.lua
 src\Utils\SupportUI.lua
 
+src\Core\PlayerList.lua
 src\Core\Core.lua
 
