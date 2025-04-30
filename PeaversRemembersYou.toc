@@ -9,11 +9,14 @@
 ## Version: 1.0.3
 ## X-Curse-Project-ID: 1243255
 
+## Dependencies: PeaversCommons
+
 ## SavedVariables: PeaversRemembersYouDB
 
 ## Category-enUS: Peavers
 
 src\Main.lua
+src\Utils\Config.lua
 src\Utils\ConfigUI.lua
 src\Utils\SupportUI.lua
 
