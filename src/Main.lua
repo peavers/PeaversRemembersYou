@@ -1,50 +1,53 @@
 local addonName, PRY = ...
 
+-- Access the PeaversCommons library
+local PeaversCommons = _G.PeaversCommons
+local Utils = PeaversCommons.Utils
+
 -- Initialize addon namespace and modules
 PRY = PRY or {}
 
 -- Module namespaces
 PRY.Utils = {}
-PRY.Config = {}
 
 -- Version information
-PRY.version = "1.0.0"
+PRY.version = C_AddOns.GetAddOnMetadata(addonName, "Version") or "1.0.0"
 PRY.addonName = addonName
+PRY.name = addonName
 
--- Initialize addon when ADDON_LOADED event fires
-local initFrame = CreateFrame("Frame")
-initFrame:RegisterEvent("ADDON_LOADED")
+-- Register slash commands
+PeaversCommons.SlashCommands:Register(addonName, "pry", {
+	default = function()
+		Settings.OpenToCategory("PeaversRemembersYou")
+	end,
+	reset = function()
+		StaticPopup_Show("PRY_CONFIRM_RESET")
+	end,
+	help = function()
+		Utils.Print(PRY, "Commands:")
+		print("  /pry - Open settings")
+		print("  /pry reset - Reset player database")
+	end
+})
 
-initFrame:SetScript("OnEvent", function(self, event, arg1)
-    if event == "ADDON_LOADED" and arg1 == addonName then
-        -- Initialize core functionality first
-        PRY:Initialize()
+-- Initialize addon using the PeaversCommons Events module
+PeaversCommons.Events:Init(addonName, function()
+	-- Initialize configuration
+	PRY.Config:Initialize()
 
-        -- Initialize configuration UI if available with a small delay
-        C_Timer.After(0.2, function()
-            if PRY.ConfigUI and PRY.ConfigUI.Initialize then
-                PRY.ConfigUI:Initialize()
-            end
+	-- Initialize core functionality
+	PRY:Initialize()
 
-            -- Initialize support UI if available with a small delay
-            C_Timer.After(0.1, function()
-                if PRY.SupportUI and PRY.SupportUI.Initialize then
-                    PRY.SupportUI:Initialize()
-                end
-            end)
-        end)
+	-- Initialize configuration UI
+	if PRY.ConfigUI and PRY.ConfigUI.Initialize then
+		PRY.ConfigUI:Initialize()
+	end
 
-        -- Unregister the event
-        self:UnregisterEvent("ADDON_LOADED")
-    end
-end)
+	-- Initialize support UI
+	if PRY.SupportUI and PRY.SupportUI.Initialize then
+		PRY.SupportUI:Initialize()
+	end
 
--- Print a loading message once PLAYER_ENTERING_WORLD fires
-local loadingFrame = CreateFrame("Frame")
-loadingFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-loadingFrame:SetScript("OnEvent", function(self, event)
-    if event == "PLAYER_ENTERING_WORLD" then
-        print("|cff33ff99PeaversRemembersYou|r: Addon loaded - remembering your party members")
-        self:UnregisterEvent("PLAYER_ENTERING_WORLD")
-    end
+	-- Print a welcome message
+	Utils.Print(PRY, "Addon loaded - remembering your party members")
 end)
