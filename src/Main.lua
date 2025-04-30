@@ -48,6 +48,6 @@ PeaversCommons.Events:Init(addonName, function()
 		PRY.SupportUI:Initialize()
 	end
 
-	-- Print a welcome message
-	Utils.Print(PRY, "Addon loaded - remembering your party members")
-end)
+end, {
+	announceMessage = "Type /pry config for options."
+})
