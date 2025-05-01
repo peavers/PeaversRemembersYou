@@ -100,31 +100,31 @@ local function CreateSlider(parent, name, label, min, max, step, defaultVal, xOf
 end
 
 function ConfigUI:InitializeOptions()
-	local panel = CreateFrame("Frame")
-	panel.name = "PeaversRemembersYou"
+    local panel = CreateFrame("Frame")
+    panel.name = "Settings"  -- Changed from "PeaversRemembersYou" to "Settings"
 
-	panel.layoutIndex = 1
-	panel.OnShow = function(self)
-		return true
-	end
+    panel.layoutIndex = 1
+    panel.OnShow = function(self)
+        return true
+    end
 
-	local yPos = -16
+    local yPos = -16
 
-  	-- Create header and description
-	local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-	title:SetPoint("TOPLEFT", 16, yPos)
-	title:SetText("Peavers Remembers You")
-	title:SetTextColor(1, 0.84, 0)  -- Gold color for main title
-	yPos = yPos - 25
+    -- Create header and description
+    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", 16, yPos)
+    title:SetText("Peavers Remembers You")
+    title:SetTextColor(1, 0.84, 0)  -- Gold color for main title
+    yPos = yPos - 25
 
-	local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	subtitle:SetPoint("TOPLEFT", 16, yPos)
-	subtitle:SetText("Records players you group with and notifies you when you meet them again")
-	yPos = yPos - 25
+    local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    subtitle:SetPoint("TOPLEFT", 16, yPos)
+    subtitle:SetText("Records players you group with and notifies you when you meet them again")
+    yPos = yPos - 25
 
-	-- Add separator
-	local _, newY = CreateSeparator(panel, 16, yPos)
-	yPos = newY
+    -- Add separator
+    local _, newY = CreateSeparator(panel, 16, yPos)
+    yPos = newY
 
 
   -- SECTION 1: General Options
@@ -228,20 +228,19 @@ function ConfigUI:InitializeOptions()
     end)
     yPos = yPos - 40
 
-	PRY.mainCategory = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
-	PRY.mainCategory.ID = panel.name
-	Settings.RegisterAddOnCategory(PRY.mainCategory)
+    -- Let PeaversCommons handle category registration
+    -- The panel will be added as the first subcategory automatically
 
-	panel.OnRefresh = function()
-	end
-	panel.OnCommit = function()
-	end
-	panel.OnDefault = function()
-	end
+    panel.OnRefresh = function()
+    end
+    panel.OnCommit = function()
+    end
+    panel.OnDefault = function()
+    end
 
-	return panel
+    return panel
 end
 
 function ConfigUI:Initialize()
-	self:InitializeOptions()
+	self.panel = self:InitializeOptions()
 end
