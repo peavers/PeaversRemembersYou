@@ -7,6 +7,7 @@ local Utils = PeaversCommons.Utils
 -- Local variables
 local icon = "|TInterface\\Icons\\INV_Misc_Note_01:16:16:0:0|t"
 local currentGroupMembers = {} -- Track current group members
+local pendingGuidPlayers = {} -- Track players with missing GUIDs for retry
 
 -- Initialize the addon
 function PRY:Initialize()
@@ -42,9 +43,10 @@ function PRY:Initialize()
         if not PRY.Config.enabled then return end
         if not IsInGroup() and not IsInRaid() then
             wipe(currentGroupMembers) -- Clear current group members when leaving group
+            wipe(pendingGuidPlayers) -- Clear pending players when leaving group
             return
         end
-        
+
         PRY:ProcessGroupMembers()
     end)
 
@@ -52,16 +54,18 @@ function PRY:Initialize()
         if not PRY.Config.enabled then return end
         if not IsInGroup() and not IsInRaid() then
             wipe(currentGroupMembers) -- Clear current group members when leaving group
+            wipe(pendingGuidPlayers) -- Clear pending players when leaving group
             return
         end
-        
+
         PRY:ProcessGroupMembers()
     end)
 
     PeaversCommons.Events:RegisterEvent("PLAYER_ENTERING_WORLD", function()
         if not PRY.Config.enabled then return end
         wipe(currentGroupMembers) -- Clear current group members on login/reload
-        
+        wipe(pendingGuidPlayers) -- Clear pending players on login/reload
+
         if IsInGroup() or IsInRaid() then
             PRY:UpdateCurrentGroupMembers()
         end
@@ -124,17 +128,36 @@ function PRY:ProcessGroupMembers()
             if UnitExists(unit) then
                 local name = GetUnitName(unit, true)
 
-                -- Only process real players, not NPCs or unknown entities
-                local guid = UnitGUID(unit)
-                if name and name ~= UnitName("player") and UnitIsPlayer(unit) and guid and guid ~= "" then
+                if name and name ~= UnitName("player") and UnitIsPlayer(unit) then
+                    local guid = UnitGUID(unit)
                     local isGuildMember = UnitIsInMyGuild(unit)
-                    newGroupMembers[name] = true
 
-                    -- Skip guild members if option is enabled
-                    if not (PRY.Config.excludeGuild and isGuildMember) then
-                        -- Only process if they're not already in the current group
-                        if not currentGroupMembers[name] then
-                            self:ProcessPlayer(name, groupType)
+                    if guid and guid ~= "" then
+                        -- Valid player with GUID, process normally
+                        newGroupMembers[name] = true
+
+                        -- Skip guild members if option is enabled
+                        if not (PRY.Config.excludeGuild and isGuildMember) then
+                            -- Only process if they're not already in the current group
+                            if not currentGroupMembers[name] then
+                                self:ProcessPlayer(name, groupType)
+                            end
+                        end
+                    else
+                        -- Player without valid GUID, add to pending list for retry
+                        if not pendingGuidPlayers[name] then
+                            pendingGuidPlayers[name] = {
+                                unit = unit,
+                                groupType = groupType,
+                                added = time()
+                            }
+
+                            -- Start checking pending players if this is the first one
+                            local pendingCount = 0
+                            for _ in pairs(pendingGuidPlayers) do pendingCount = pendingCount + 1 end
+                            if pendingCount == 1 then
+                                C_Timer.After(5, function() PRY:CheckPendingPlayers() end)
+                            end
                         end
                     end
                 end
@@ -213,6 +236,44 @@ function PRY:CleanupDatabase()
         if (currentTime - data.lastSeen) > ttlSeconds then
             PeaversRemembersYouDB.players[name] = nil
         end
+    end
+end
+
+-- Check pending players with missing GUIDs
+function PRY:CheckPendingPlayers()
+    local playersToRemove = {}
+
+    for name, info in pairs(pendingGuidPlayers) do
+        local unit = info.unit
+        local groupType = info.groupType
+
+        -- Check if the unit still exists and now has a GUID
+        if UnitExists(unit) then
+            local guid = UnitGUID(unit)
+            if guid and guid ~= "" then
+                -- Player now has a valid GUID, process them
+                if not currentGroupMembers[name] then
+                    self:ProcessPlayer(name, groupType)
+                    currentGroupMembers[name] = true
+                end
+
+                -- Mark for removal from pending list
+                table.insert(playersToRemove, name)
+            end
+        else
+            -- Unit no longer exists, remove from pending
+            table.insert(playersToRemove, name)
+        end
+    end
+
+    -- Remove processed players from pending list
+    for _, name in ipairs(playersToRemove) do
+        pendingGuidPlayers[name] = nil
+    end
+
+    -- Schedule next check if we still have pending players
+    if next(pendingGuidPlayers) then
+        C_Timer.After(30, function() PRY:CheckPendingPlayers() end)
     end
 end
 
