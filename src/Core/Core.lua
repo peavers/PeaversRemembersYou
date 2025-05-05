@@ -84,7 +84,9 @@ function PRY:UpdateCurrentGroupMembers()
             if UnitExists(unit) then
                 local name = GetUnitName(unit, true)
 
-                if name and name ~= UnitName("player") then
+                -- Only track real players, not NPCs or unknown entities
+                local guid = UnitGUID(unit)
+                if name and name ~= UnitName("player") and UnitIsPlayer(unit) and guid and guid ~= "" then
                     currentGroupMembers[name] = true
                 end
             end
@@ -122,7 +124,9 @@ function PRY:ProcessGroupMembers()
             if UnitExists(unit) then
                 local name = GetUnitName(unit, true)
 
-                if name and name ~= UnitName("player") then
+                -- Only process real players, not NPCs or unknown entities
+                local guid = UnitGUID(unit)
+                if name and name ~= UnitName("player") and UnitIsPlayer(unit) and guid and guid ~= "" then
                     local isGuildMember = UnitIsInMyGuild(unit)
                     newGroupMembers[name] = true
 
