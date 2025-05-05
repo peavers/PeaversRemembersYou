@@ -47,6 +47,11 @@ PeaversCommons.Events:Init(addonName, function()
 	if PRY.SupportUI and PRY.SupportUI.Initialize then
 		PRY.SupportUI:Initialize()
 	end
+	
+	-- Initialize patrons support
+	if PRY.Patrons and PRY.Patrons.Initialize then
+		PRY.Patrons:Initialize()
+	end
 
 	-- DIRECT REGISTRATION APPROACH
 	-- This ensures the addon appears in Options > Addons regardless of PeaversCommons logic
