@@ -32,7 +32,8 @@ PeaversCommons.SlashCommands:Register(addonName, "pry", {
 
 -- Initialize addon using the PeaversCommons Events module
 PeaversCommons.Events:Init(addonName, function()
-	-- Initialize configuration
+	-- Configuration initialization is handled by ConfigManager
+	-- However we need to call Initialize to ensure player data is set up
 	PRY.Config:Initialize()
 
 	-- Initialize core functionality

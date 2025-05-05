@@ -12,6 +12,5 @@
 src\Main.lua
 src\Utils\Config.lua
 src\Utils\ConfigUI.lua
-src\Utils\Patrons.lua
 src\Core\Core.lua
 

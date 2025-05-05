@@ -1,6 +1,7 @@
 local addonName, PRY = ...
-local Config = {}
-PRY.Config = Config
+
+-- Access PeaversCommons utilities
+local PeaversCommons = _G.PeaversCommons
 
 -- Default settings
 local defaults = {
@@ -12,41 +13,50 @@ local defaults = {
     DEBUG_ENABLED = false
 }
 
--- Initialize configuration
-function Config:Initialize()
-    -- Load saved variables
+-- Create configuration using PeaversCommons.ConfigManager
+PRY.Config = PeaversCommons.ConfigManager:New(
+    "PeaversRemembersYou", 
+    defaults,  -- Default settings first
+    {
+        savedVariablesName = "PeaversRemembersYouDB",
+        settingsKey = "settings" -- Use settings key for backward compatibility
+    }
+)
+
+-- Initialize configuration is already handled by the ConfigManager
+
+-- Make sure we have a players table for legacy compatibility
+local function InitializePlayers()
     PeaversRemembersYouDB = PeaversRemembersYouDB or {}
-    
-    if not PeaversRemembersYouDB.settings then
-        PeaversRemembersYouDB.settings = {}
-    end
-    
     if not PeaversRemembersYouDB.players then
         PeaversRemembersYouDB.players = {}
     end
-    
-    -- Merge with defaults
-    for k, v in pairs(defaults) do
-        if PeaversRemembersYouDB.settings[k] == nil then
-            PeaversRemembersYouDB.settings[k] = v
-        end
-    end
-    
-    -- Copy to the current config
-    for k, v in pairs(PeaversRemembersYouDB.settings) do
-        self[k] = v
-    end
-    
-    return self
 end
 
--- Save configuration
-function Config:Save()
-    for k, _ in pairs(defaults) do
-        if self[k] ~= nil then
-            PeaversRemembersYouDB.settings[k] = self[k]
-        end
-    end
+-- Add custom config methods for working with the players database
+function PRY.Config:GetPlayerData(name)
+    InitializePlayers()
+    return PeaversRemembersYouDB.players[name]
 end
 
-return Config
+function PRY.Config:SetPlayerData(name, data)
+    InitializePlayers()
+    PeaversRemembersYouDB.players[name] = data
+end
+
+function PRY.Config:ResetPlayerData()
+    InitializePlayers()
+    PeaversRemembersYouDB.players = {}
+end
+
+function PRY.Config:GetAllPlayerData()
+    InitializePlayers()
+    return PeaversRemembersYouDB.players
+end
+
+function PRY.Config:Initialize()
+    -- For backward compatibility, ensure initialization of players table
+    InitializePlayers()
+end
+
+return PRY.Config

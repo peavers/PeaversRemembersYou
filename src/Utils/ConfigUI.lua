@@ -3,240 +3,177 @@ local _, PRY = ...
 local ConfigUI = {}
 PRY.ConfigUI = ConfigUI
 
--- Helper functions for UI creation
-local function CreateSeparator(parent, xOffset, yPos, width)
-    local separator = parent:CreateTexture(nil, "ARTWORK")
-    separator:SetHeight(1)
-    separator:SetPoint("TOPLEFT", xOffset, yPos)
-    if width then
-        separator:SetWidth(width)
-    else
-        separator:SetPoint("TOPRIGHT", -xOffset, yPos)
-    end
-    separator:SetColorTexture(0.3, 0.3, 0.3, 0.9)
-    return separator, yPos - 15
+-- Access PeaversCommons utilities
+local PeaversCommons = _G.PeaversCommons
+local FrameUtils = PeaversCommons.FrameUtils
+local ConfigUIUtils = PeaversCommons.ConfigUIUtils
+
+-- Utility functions to reduce code duplication (using PeaversCommons.ConfigUIUtils)
+local Utils = {}
+
+-- Creates a slider with standardized formatting
+function Utils:CreateSlider(parent, name, label, min, max, step, defaultVal, width, callback)
+    return ConfigUIUtils.CreateSlider(parent, name, label, min, max, step, defaultVal, width, callback)
 end
 
-local function CreateSectionHeader(parent, text, xOffset, yPos)
-    local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    header:SetPoint("TOPLEFT", xOffset, yPos)
-    header:SetText(text)
-    header:SetTextColor(1, 0.82, 0)
-    return header, yPos - 20
+-- Creates a dropdown with standardized formatting
+function Utils:CreateDropdown(parent, name, label, options, defaultOption, width, callback)
+    return ConfigUIUtils.CreateDropdown(parent, name, label, options, defaultOption, width, callback)
 end
 
-local function CreateLabel(parent, text, xOffset, yPos, fontStyle)
-    local label = parent:CreateFontString(nil, "ARTWORK", fontStyle or "GameFontNormal")
-    label:SetPoint("TOPLEFT", xOffset, yPos)
-    label:SetText(text)
-    return label, yPos - 15
+-- Creates a checkbox with standardized formatting
+function Utils:CreateCheckbox(parent, name, label, x, y, checked, callback)
+    return ConfigUIUtils.CreateCheckbox(parent, name, label, x, y, checked, callback)
 end
 
-local function CreateCheckbox(parent, name, text, xOffset, yPos, checked, onClick)
-    local checkbox = CreateFrame("CheckButton", name, parent, "InterfaceOptionsCheckButtonTemplate")
-    checkbox:SetPoint("TOPLEFT", xOffset, yPos)
-
-    -- Set the text
-    local checkboxText = _G[checkbox:GetName() .. "Text"]
-    if checkboxText then
-        checkboxText:SetText(text)
-    end
-
-    -- Set the initial state
-    checkbox:SetChecked(checked)
-
-    -- Set the click handler
-    checkbox:SetScript("OnClick", onClick)
-
-    return checkbox, yPos - 25
+-- Creates a section header with standardized formatting
+function Utils:CreateSectionHeader(parent, text, indent, yPos, fontSize)
+    return ConfigUIUtils.CreateSectionHeader(parent, text, indent, yPos, fontSize)
 end
 
-local function CreateSlider(parent, name, label, min, max, step, defaultVal, xOffset, yPos, width, callback)
-    local container = CreateFrame("Frame", nil, parent)
-    container:SetSize(width or 400, 50)
-    container:SetPoint("TOPLEFT", xOffset, yPos)
+-- Creates a subsection label with standardized formatting
+function Utils:CreateSubsectionLabel(parent, text, indent, y)
+    return ConfigUIUtils.CreateSubsectionLabel(parent, text, indent, y)
+end
 
-    local labelText = container:CreateFontString(nil, "ARTWORK", "GameFontNormal")
-    labelText:SetPoint("TOPLEFT", 0, 0)
-    labelText:SetText(label .. ": " .. defaultVal)
+-- Creates a button with standardized formatting
+function Utils:CreateButton(parent, name, text, x, y, width, height, onClick)
+    return FrameUtils.CreateButton(parent, name, text, x, y, width, height, onClick)
+end
 
-    local slider = CreateFrame("Slider", name, container, "OptionsSliderTemplate")
-    slider:SetPoint("TOPLEFT", 0, -20)
-    slider:SetWidth(width or 400)
-    slider:SetHeight(16)
-    slider:SetMinMaxValues(min, max)
-    slider:SetValueStep(step)
-    slider:SetValue(defaultVal)
-
-    -- Hide default slider text
-    local sliderName = slider:GetName()
-    if sliderName then
-        local lowText = _G[sliderName .. "Low"]
-        local highText = _G[sliderName .. "High"]
-        local valueText = _G[sliderName .. "Text"]
-
-        if lowText then lowText:SetText("") end
-        if highText then highText:SetText("") end
-        if valueText then valueText:SetText("") end
-    end
-
-    -- Set the change handler
-    slider:SetScript("OnValueChanged", function(self, value)
-        local roundedValue
-        if step < 1 then
-            roundedValue = math.floor(value * (1 / step) + 0.5) / (1 / step)
-        else
-            roundedValue = math.floor(value + 0.5)
-        end
-
-        labelText:SetText(label .. ": " .. roundedValue)
-
-        if callback then
-            callback(roundedValue)
-        end
-    end)
-
-    return slider, yPos - 50
+-- Creates a separator with standardized formatting
+function Utils:CreateSeparator(parent, x, y, width)
+    return FrameUtils.CreateSeparator(parent, x, y, width)
 end
 
 function ConfigUI:InitializeOptions()
-    local panel = CreateFrame("Frame")
-    panel.name = "Settings"  -- Changed from "PeaversRemembersYou" to "Settings"
+    -- Use the ConfigUIUtils to create a standard settings panel
+    local panel = ConfigUIUtils.CreateSettingsPanel(
+        "Settings",
+        "Records players you group with and notifies you when you meet them again"
+    )
+    
+    local content = panel.content
+    local yPos = panel.yPos
+    local baseSpacing = panel.baseSpacing
+    local controlIndent = baseSpacing + 15
+    local sliderWidth = 380
 
-    panel.layoutIndex = 1
-    panel.OnShow = function(self)
-        return true
-    end
-
-    local yPos = -16
-
-    -- Create header and description
-    local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
-    title:SetPoint("TOPLEFT", 16, yPos)
-    title:SetText("Peavers Remembers You")
-    title:SetTextColor(1, 0.84, 0)  -- Gold color for main title
-    yPos = yPos - 25
-
-    local subtitle = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-    subtitle:SetPoint("TOPLEFT", 16, yPos)
-    subtitle:SetText("Records players you group with and notifies you when you meet them again")
-    yPos = yPos - 25
-
-    -- Add separator
-    local _, newY = CreateSeparator(panel, 16, yPos)
-    yPos = newY
-
-
-  -- SECTION 1: General Options
-    local header, newY = CreateSectionHeader(panel, "General Options", 16, yPos)
-    yPos = newY - 5
+    -- SECTION 1: General Options
+    local header, newY = Utils:CreateSectionHeader(content, "General Options", baseSpacing, yPos)
+    yPos = newY - 10
 
     -- Enable checkbox
-    local _, newY = CreateCheckbox(
-        panel,
+    local _, newY = Utils:CreateCheckbox(
+        content,
         "PRYEnableCheckbox",
         "Enable Addon",
-        30,
+        controlIndent,
         yPos,
-        PeaversRemembersYouDB.settings.enabled,
-        function(self)
-            PeaversRemembersYouDB.settings.enabled = self:GetChecked()
+        PRY.Config.enabled,
+        function(checked)
+            PRY.Config.enabled = checked
+            PRY.Config:Save()
         end
     )
     yPos = newY - 5
 
     -- Exclude guild members checkbox
-    local _, newY = CreateCheckbox(
-        panel,
+    local _, newY = Utils:CreateCheckbox(
+        content,
         "PRYExcludeGuildCheckbox",
         "Exclude Guild Members",
-        30,
+        controlIndent,
         yPos,
-        PeaversRemembersYouDB.settings.excludeGuild,
-        function(self)
-            PeaversRemembersYouDB.settings.excludeGuild = self:GetChecked()
+        PRY.Config.excludeGuild,
+        function(checked)
+            PRY.Config.excludeGuild = checked
+            PRY.Config:Save()
         end
     )
     yPos = newY - 10
 
     -- Add separator
-    local _, newY = CreateSeparator(panel, 16, yPos)
-    yPos = newY
+    local _, newY = Utils:CreateSeparator(content, baseSpacing, yPos)
+    yPos = newY - 15
 
     -- SECTION 2: Notification Settings
-    local header, newY = CreateSectionHeader(panel, "Notification Settings", 16, yPos)
-    yPos = newY - 5
+    local header, newY = Utils:CreateSectionHeader(content, "Notification Settings", baseSpacing, yPos)
+    yPos = newY - 10
 
     -- TTL slider
-    local _, newY = CreateSlider(
-        panel,
+    local ttlContainer, ttlSlider = Utils:CreateSlider(
+        content,
         "PRYTTLSlider",
         "Days to Remember Players",
         1, 365, 1,
-        PeaversRemembersYouDB.settings.ttl,
-        30, yPos, 400,
+        PRY.Config.ttl,
+        sliderWidth,
         function(value)
-            PeaversRemembersYouDB.settings.ttl = value
+            PRY.Config.ttl = value
+            PRY.Config:Save()
         end
     )
-    yPos = newY
+    ttlContainer:SetPoint("TOPLEFT", controlIndent, yPos)
+    yPos = yPos - 55
 
     -- Chat frame slider
-    local _, newY = CreateSlider(
-        panel,
+    local chatFrameContainer, chatFrameSlider = Utils:CreateSlider(
+        content,
         "PRYChatFrameSlider",
         "Notification Chat Frame",
         1, 10, 1,
-        PeaversRemembersYouDB.settings.chatFrame,
-        30, yPos, 400,
+        PRY.Config.chatFrame,
+        sliderWidth,
         function(value)
-            PeaversRemembersYouDB.settings.chatFrame = value
+            PRY.Config.chatFrame = value
+            PRY.Config:Save()
         end
     )
-    yPos = newY
+    chatFrameContainer:SetPoint("TOPLEFT", controlIndent, yPos)
+    yPos = yPos - 55
 
-    -- Notification threshold slider - Updated to allow 0 (always notify)
-    local _, newY = CreateSlider(
-        panel,
+    -- Notification threshold slider
+    local thresholdContainer, thresholdSlider = Utils:CreateSlider(
+        content,
         "PRYThresholdSlider",
         "Notification Threshold (minutes - 0 for always)",
         0, 60, 1,
-        PeaversRemembersYouDB.settings.notificationThreshold / 60,
-        30, yPos, 400,
+        PRY.Config.notificationThreshold / 60,
+        sliderWidth,
         function(value)
-            PeaversRemembersYouDB.settings.notificationThreshold = value * 60 -- Convert minutes to seconds
+            PRY.Config.notificationThreshold = value * 60 -- Convert minutes to seconds
+            PRY.Config:Save()
         end
     )
-    yPos = newY
+    thresholdContainer:SetPoint("TOPLEFT", controlIndent, yPos)
+    yPos = yPos - 65
 
     -- Add separator
-    local _, newY = CreateSeparator(panel, 16, yPos)
-    yPos = newY
+    local _, newY = Utils:CreateSeparator(content, baseSpacing, yPos)
+    yPos = newY - 15
 
     -- SECTION 3: Database Management
-    local header, newY = CreateSectionHeader(panel, "Database Management", 16, yPos)
+    local header, newY = Utils:CreateSectionHeader(content, "Database Management", baseSpacing, yPos)
     yPos = newY - 15
 
     -- Reset button
-    local resetBtn = CreateFrame("Button", "PRYResetButton", panel, "UIPanelButtonTemplate")
-    resetBtn:SetPoint("TOPLEFT", 30, yPos)
-    resetBtn:SetWidth(150)
-    resetBtn:SetHeight(25)
-    resetBtn:SetText("Reset Database")
-    resetBtn:SetScript("OnClick", function()
-        StaticPopup_Show("PRY_CONFIRM_RESET")
-    end)
-    yPos = yPos - 40
+    local resetBtn, btnY = Utils:CreateButton(
+        content, 
+        "PRYResetButton", 
+        "Reset Database", 
+        controlIndent, 
+        yPos, 
+        150, 
+        25, 
+        function()
+            StaticPopup_Show("PRY_CONFIRM_RESET")
+        end
+    )
+    yPos = btnY - 10
 
-    -- Let PeaversCommons handle category registration
-    -- The panel will be added as the first subcategory automatically
-
-    panel.OnRefresh = function()
-    end
-    panel.OnCommit = function()
-    end
-    panel.OnDefault = function()
-    end
+    -- Update content height
+    panel:UpdateContentHeight(yPos)
 
     return panel
 end

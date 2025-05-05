@@ -175,15 +175,16 @@ end
 -- Process a player
 function PRY:ProcessPlayer(name, groupType)
     local currentTime = time()
+    local playerData = PRY.Config:GetPlayerData(name)
 
-    if PeaversRemembersYouDB.players[name] then
+    if playerData then
         -- Player exists in database
-        local timeSinceLastMet = currentTime - PeaversRemembersYouDB.players[name].lastSeen
+        local timeSinceLastMet = currentTime - playerData.lastSeen
 
         -- Fix: Always send notification if threshold is 0, otherwise use threshold
         if PRY.Config.notificationThreshold == 0 or
            timeSinceLastMet >= PRY.Config.notificationThreshold then
-            local oldGroupType = PeaversRemembersYouDB.players[name].groupType
+            local oldGroupType = playerData.groupType
 
             -- Use the fancy formatted message
             if timeSinceLastMet >= 86400 then -- More than 1 day
@@ -200,16 +201,16 @@ function PRY:ProcessPlayer(name, groupType)
         end
 
         -- Update last seen time and group type
-        PeaversRemembersYouDB.players[name].lastSeen = currentTime
-        PeaversRemembersYouDB.players[name].groupType = groupType
-
+        playerData.lastSeen = currentTime
+        playerData.groupType = groupType
+        PRY.Config:SetPlayerData(name, playerData)
     else
         -- New player, add to database
-        PeaversRemembersYouDB.players[name] = {
+        PRY.Config:SetPlayerData(name, {
             firstSeen = currentTime,
             lastSeen = currentTime,
             groupType = groupType
-        }
+        })
     end
 end
 
@@ -231,10 +232,11 @@ end
 function PRY:CleanupDatabase()
     local currentTime = time()
     local ttlSeconds = PRY.Config.ttl * 86400
+    local allPlayers = PRY.Config:GetAllPlayerData()
 
-    for name, data in pairs(PeaversRemembersYouDB.players) do
+    for name, data in pairs(allPlayers) do
         if (currentTime - data.lastSeen) > ttlSeconds then
-            PeaversRemembersYouDB.players[name] = nil
+            PRY.Config:SetPlayerData(name, nil) -- Set to nil to remove
         end
     end
 end
@@ -279,7 +281,7 @@ end
 
 -- Reset database
 function PRY:ResetDatabase()
-    wipe(PeaversRemembersYouDB.players)
+    PRY.Config:ResetPlayerData()
     Utils.Print(PRY, "Player database has been cleared.")
 
     -- Show reload UI confirmation
