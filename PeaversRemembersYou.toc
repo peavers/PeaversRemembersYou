@@ -3,7 +3,7 @@
 ## IconTexture: Interface\AddOns\PeaversCommons\src\Media\Icon.tga
 ## Notes: Records players you group with and notifies you when you meet them again
 ## Author: Peavers
-## Version: 1.0.9
+## Version: 1.0.10
 ## X-Curse-Project-ID: 1243255
 ## Dependencies: PeaversCommons
 ## SavedVariables: PeaversRemembersYouDB
