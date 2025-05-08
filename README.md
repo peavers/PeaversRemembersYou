@@ -4,6 +4,9 @@
 
 **A World of Warcraft addon that displays helpful notifications when you group with players you've previously played with.**
 
+### New!
+Check out [peavers.io](https://peavers.io) and [bootstrap.peavers.io](https://bootstrap.peavers.io) for all my WoW addons and support.
+
 ## Overview
 
 PeaversRemembersYou solves the common "I'm sure I've played with this person before" problem by tracking your grouping history and displaying a friendly notification when you join a group with someone you've previously encountered. The addon helps maintain a sense of community in the often anonymous world of group finder.
