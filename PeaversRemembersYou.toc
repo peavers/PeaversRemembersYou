@@ -1,4 +1,4 @@
-## Interface: 110105
+## Interface: 110107
 ## Title: |cff3abdf7Peavers|rRemembersYou
 ## IconTexture: Interface\AddOns\PeaversCommons\src\Media\Icon.tga
 ## Notes: Records players you group with and notifies you when you meet them again
