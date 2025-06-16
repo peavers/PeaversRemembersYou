@@ -43,3 +43,5 @@ PeaversRemembersYou solves the common "I'm sure I've played with this person bef
 ## Support & Feedback
 
 If you encounter any issues or have suggestions for improvements, please submit them via [GitHub Issues](https://github.com/peavers/PeaversRemembersYou/issues). Your feedback is valuable in enhancing the addon experience for all players.
+
+<!-- Workflow triggered: 2025-06-16T10:46:01.482133 -->
